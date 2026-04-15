@@ -1,0 +1,65 @@
+.corx-list-table-form {
+  margin-top: 14px;
+}
+
+.corx-filter-form {
+  margin: 14px 0 18px;
+  padding: 12px;
+  background: #fff;
+  border: 1px solid #ccd0d4;
+}
+
+.corx-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.corx-filter-row:last-child {
+  margin-bottom: 0;
+}
+
+.corx-filter-row label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.corx-filter-row input[type="text"] {
+  min-width: 220px;
+}
+
+.corx-subtext {
+  color: #666;
+}
+
+.corx-badge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.corx-ok {
+  background: #edf7ed;
+  color: #166534;
+}
+
+.corx-warning {
+  background: #fff7ed;
+  color: #9a3412;
+}
+
+.corx-muted {
+  color: #6b7280;
+}
+
+.corx-error {
+  color: #b91c1c;
+}
+.contribution_xero_rows .column-order_status{
+  width:auto;
+}
