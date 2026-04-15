@@ -9,6 +9,7 @@ class CORX_Report_Query {
    */
   private const ORDER_SOURCE_META_KEY = '_order_source';
   private const ORDER_CREATED_VIA_META_KEY = '_created_via';
+  private const MAX_FILTER_LOOKUP_RESULTS = 5000;
 
   private $wpdb;
 
@@ -249,12 +250,13 @@ class CORX_Report_Query {
    */
   public function getDistinctOrderSources(): array {
     $sql = "
-      SELECT meta_key, meta_value
+      SELECT DISTINCT meta_key, meta_value
       FROM {$this->wpdb->postmeta}
       WHERE meta_key IN (%s, %s)
       AND meta_value <> ''
+      LIMIT %d
     ";
-    $prepared = $this->wpdb->prepare($sql, self::ORDER_SOURCE_META_KEY, self::ORDER_CREATED_VIA_META_KEY);
+    $prepared = $this->wpdb->prepare($sql, self::ORDER_SOURCE_META_KEY, self::ORDER_CREATED_VIA_META_KEY, self::MAX_FILTER_LOOKUP_RESULTS);
     $results = $this->wpdb->get_results($prepared, ARRAY_A);
     if (!is_array($results)) {
       return [];
@@ -393,7 +395,7 @@ class CORX_Report_Query {
       'sequential' => 1,
       'contact_id' => ['IN' => $contactIDs],
       'return' => ['id'],
-      'options' => ['limit' => 0],
+      'options' => ['limit' => self::MAX_FILTER_LOOKUP_RESULTS],
     ]);
     if (!empty($result['is_error']) || empty($result['values'])) {
       return [];
@@ -469,7 +471,7 @@ class CORX_Report_Query {
       'sequential' => 1,
       'return' => ['id'],
       'display_name' => ['LIKE' => '%' . $searchTerm . '%'],
-      'options' => ['limit' => 0],
+      'options' => ['limit' => self::MAX_FILTER_LOOKUP_RESULTS],
     ]);
     if (empty($displayResult['is_error']) && !empty($displayResult['values'])) {
       foreach ($displayResult['values'] as $row) {
@@ -482,7 +484,7 @@ class CORX_Report_Query {
       'sequential' => 1,
       'return' => ['contact_id'],
       'email' => ['LIKE' => '%' . $searchTerm . '%'],
-      'options' => ['limit' => 0],
+      'options' => ['limit' => self::MAX_FILTER_LOOKUP_RESULTS],
     ]);
     if (empty($emailResult['is_error']) && !empty($emailResult['values'])) {
       foreach ($emailResult['values'] as $row) {
