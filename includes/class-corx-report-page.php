@@ -104,6 +104,7 @@ class CORX_Report_Page {
         <?php wp_nonce_field('corx_export_page', 'corx_export_nonce'); ?>
         <p class="corx-export-actions">
           <button type="submit" name="corx_export_page" value="1" class="button"><?php esc_html_e('Export CSV (current page)', 'contribution-order-xero-report'); ?></button>
+          <button type="submit" name="corx_export_all" value="1" class="button"><?php esc_html_e('Export CSV (all matching rows)', 'contribution-order-xero-report'); ?></button>
         </p>
         <?php $table->display(); ?>
       </form>
@@ -156,7 +157,7 @@ class CORX_Report_Page {
       return;
     }
 
-    if (!empty($_REQUEST['corx_export_page'])) {
+    if (!empty($_REQUEST['corx_export_page']) || !empty($_REQUEST['corx_export_all'])) {
       if (empty($_REQUEST['corx_export_nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_REQUEST['corx_export_nonce'])), 'corx_export_page')) {
         return;
       }
@@ -164,10 +165,24 @@ class CORX_Report_Page {
       $orderby = sanitize_key($_REQUEST['orderby'] ?? 'receive_date');
       $order = strtoupper(sanitize_key($_REQUEST['order'] ?? 'DESC'));
       $order = $order === 'ASC' ? 'ASC' : 'DESC';
-      $paged = max(1, (int) ($_REQUEST['paged'] ?? 1));
-      $perPage = 50;
 
       $query = new CORX_Report_Query();
+
+      if (!empty($_REQUEST['corx_export_all'])) {
+        $batchSize = 500;
+        $sorting = ['orderby' => $orderby, 'order' => $order];
+        CORX_Report_Csv::streamDownload(
+          'contribution-xero-report-all-' . gmdate('Y-m-d-His') . '.csv',
+          static function (int $pageNum) use ($query, $filters, $sorting, $batchSize): array {
+            $result = $query->getRows($filters, $sorting, $batchSize, $pageNum);
+            return $result['rows'] ?? [];
+          }
+        );
+        exit;
+      }
+
+      $paged = max(1, (int) ($_REQUEST['paged'] ?? 1));
+      $perPage = 50;
       $result = $query->getRows($filters, [
         'orderby' => $orderby,
         'order' => $order,
@@ -256,7 +271,7 @@ class CORX_Report_Page {
       'action', 'action2', '_wpnonce', 'contribution_xero_row',
       'corx_notice', 'corx_n', 'corx_fail', 'corx_err',
       'corx_queue_invoice_id',
-      'corx_export_page', 'corx_export_nonce',
+      'corx_export_page', 'corx_export_all', 'corx_export_nonce',
     ];
     $url = remove_query_arg($strip, $url);
     $args = [

@@ -11,6 +11,59 @@ class CORX_Report_Csv {
    * @param array<int, array<string, mixed>> $rows
    */
   public static function sendDownload(string $filename, array $rows): void {
+    $out = self::beginDownload($filename);
+    if ($out === false) {
+      return;
+    }
+    self::writeRows($out, $rows);
+    self::endDownload($out);
+  }
+
+  /**
+   * Stream a full dataset in paged batches by calling $fetchPage($pageNum) until it returns empty.
+   * Each batch is flushed to the browser to keep memory bounded.
+   *
+   * @param string   $filename  Download filename.
+   * @param callable $fetchPage fn(int $pageNum): array<int, array<string, mixed>>
+   * @param int      $maxRows   Hard cap on total rows streamed (safety).
+   */
+  public static function streamDownload(string $filename, callable $fetchPage, int $maxRows = 5000): void {
+    $out = self::beginDownload($filename);
+    if ($out === false) {
+      return;
+    }
+
+    @set_time_limit(0);
+    if (function_exists('wp_raise_memory_limit')) {
+      wp_raise_memory_limit('admin');
+    }
+    ignore_user_abort(true);
+
+    $written = 0;
+    $pageNum = 1;
+    while ($written < $maxRows) {
+      $batch = call_user_func($fetchPage, $pageNum);
+      if (!is_array($batch) || empty($batch)) {
+        break;
+      }
+      if ($written + count($batch) > $maxRows) {
+        $batch = array_slice($batch, 0, $maxRows - $written);
+      }
+      self::writeRows($out, $batch);
+      $written += count($batch);
+      if (function_exists('flush')) {
+        @flush();
+      }
+      $pageNum++;
+    }
+
+    self::endDownload($out);
+  }
+
+  /**
+   * @return resource|false
+   */
+  private static function beginDownload(string $filename) {
     $filename = sanitize_file_name($filename);
     if ($filename === '') {
       $filename = 'export.csv';
@@ -28,13 +81,26 @@ class CORX_Report_Csv {
 
     $out = fopen('php://output', 'w');
     if ($out === false) {
-      return;
+      return false;
     }
-
     fputcsv($out, self::headers());
+    return $out;
+  }
+
+  /**
+   * @param resource $out
+   * @param array<int, array<string, mixed>> $rows
+   */
+  private static function writeRows($out, array $rows): void {
     foreach ($rows as $row) {
       fputcsv($out, self::rowToValues($row));
     }
+  }
+
+  /**
+   * @param resource $out
+   */
+  private static function endDownload($out): void {
     fclose($out);
   }
 
